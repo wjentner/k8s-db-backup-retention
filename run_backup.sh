@@ -19,6 +19,7 @@ then
   else
     kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- sh -c 'PGPASSFILE="/tmp/.pgpass" "'${BACKUP_EXEC}'" -U"'${BACKUP_DB_USER}'"' | gzip -9 -c > $FILE
   fi
+  kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- rm /tmp/.pgpass
 elif [ "${BACKUP_EXEC}" == "mysqldump" ]
 then
   kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- "${BACKUP_EXEC}" -u"${BACKUP_DB_USER}" -p"${BACKUP_DB_PASSWORD}" "${BACKUP_DATABASES}" | gzip -9 -c > $FILE
