@@ -3,7 +3,7 @@
 echo "$(date -Iseconds): Begin backup"
 
 DATE=$(date -Iseconds)
-MIN="${BACKUP_RETENTION_SECONDS}"
+MIN="${BACKUP_RETENTION_MINUTES}"
 
 DB="${BACKUP_FILE_PREFIX}"
 FILE="${BACKUP_DIR}/${DB}-${DATE}.sql.gz"
