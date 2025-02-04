@@ -10,7 +10,23 @@ FILE="${BACKUP_DIR}/${DB}-${DATE}.sql.gz"
 
 LASTFILE=$(ls -Art $BACKUP_DIR/* | tail -n 1)
 
-kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- "${BACKUP_EXEC}" -u"${BACKUP_DB_USER}" -p"${BACKUP_DB_PASSWORD}" "${BACKUP_DATABASES}" | gzip -9 -c > $FILE
+if [ "${BACKUP_EXEC}" == "pg_dump" ] || [ "${BACKUP_EXEC}" == "pg_dumpall" ]
+then
+  kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- sh -c 'echo "*:*:*:'${BACKUP_DB_USER}':'${BACKUP_DB_PASSWORD}'" > /tmp/.pgpass && chmod 0600 /tmp/.pgpass'
+  if [ "${BACKUP_EXEC}" == "pg_dump" ]
+  then
+    kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- sh -c 'PGPASSFILE="/tmp/.pgpass" "'${BACKUP_EXEC}'" -U"'${BACKUP_DB_USER}'" -d"'${BACKUP_DB_NAME}'"' | gzip -9 -c > $FILE
+  else
+    kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- sh -c 'PGPASSFILE="/tmp/.pgpass" "'${BACKUP_EXEC}'" -U"'${BACKUP_DB_USER}'"' | gzip -9 -c > $FILE
+  fi
+elif [ "${BACKUP_EXEC}" == "mysqldump" ]
+then
+  kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- "${BACKUP_EXEC}" -u"${BACKUP_DB_USER}" -p"${BACKUP_DB_PASSWORD}" "${BACKUP_DATABASES}" | gzip -9 -c > $FILE
+else
+  echo "$(date -Iseconds): Unknown backup command ("${BACKUP_EXEC}")"
+  exit 1
+fi
+
 chmod 0600 $FILE
 echo "$(date -Iseconds): Backup written to file ${FILE}"
 
