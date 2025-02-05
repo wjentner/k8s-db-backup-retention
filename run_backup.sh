@@ -8,7 +8,11 @@ MIN="${BACKUP_RETENTION_MINUTES}"
 DB="${BACKUP_FILE_PREFIX}"
 FILE="${BACKUP_DIR}/${DB}-${DATE}.sql.gz"
 
+# this might error if there are no files in the directory
 LASTFILE=$(ls -Art $BACKUP_DIR/* | tail -n 1)
+
+# starting from here let script fail if there are errors
+set -e
 
 if [ "${BACKUP_EXEC}" == "pg_dump" ] || [ "${BACKUP_EXEC}" == "pg_dumpall" ]
 then
@@ -31,6 +35,7 @@ fi
 chmod 0600 $FILE
 echo "$(date -Iseconds): Backup written to file ${FILE}"
 
+set +e
 zcmp -s $FILE $LASTFILE >/dev/null 2>&1
 if [ $? -eq 0 ] #the new file is equal to the old file
 then
@@ -39,7 +44,7 @@ then
 else #the new file is not equal to the old one
   #we delete the old files
   echo "$(date -Iseconds): Remove outdated backups"
-  find "${BACKUP_DIR}" -name "$DB*.sql*gz" -type f -mmin +$MIN -delete
+  find "${BACKUP_DIR}" -name "$DB*.sql*gz" -type f -mmin +$MIN -delete || true
 fi
 
 echo "$(date -Iseconds): Backup complete"
