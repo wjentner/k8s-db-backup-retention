@@ -24,7 +24,7 @@ then
     kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- sh -c 'PGPASSFILE="/tmp/.pgpass" "'${BACKUP_EXEC}'" -U"'${BACKUP_DB_USER}'"' | gzip -9 -c > $FILE
   fi
   kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- rm /tmp/.pgpass
-elif [ "${BACKUP_EXEC}" == "mysqldump" ]
+elif [ "${BACKUP_EXEC}" == "mysqldump" ] || [ "${BACKUP_EXEC}" == "mariadb-dump" ]
 then
   kubectl -n "${BACKUP_K8S_DB_NAMESPACE}" exec "${BACKUP_K8S_DB_POD}" -- "${BACKUP_EXEC}" -u"${BACKUP_DB_USER}" -p"${BACKUP_DB_PASSWORD}" "${BACKUP_DATABASES}" | gzip -9 -c > $FILE
 else
@@ -40,11 +40,11 @@ zcmp -s $FILE $LASTFILE >/dev/null 2>&1
 if [ $? -eq 0 ] #the new file is equal to the old file
 then
   echo "$(date -Iseconds): New backup identical to last backup - remove last backup ${LASTFILE}"
-  rm "$LASTFILE"
+  rm -v "$LASTFILE"
 else #the new file is not equal to the old one
   #we delete the old files
   echo "$(date -Iseconds): Remove outdated backups"
-  find "${BACKUP_DIR}" -name "$DB*.sql*gz" -type f -mmin +$MIN -delete || true
+  find "${BACKUP_DIR}" -name "$DB*.sql*gz" -type f -mmin +$MIN -print -delete
 fi
 
 echo "$(date -Iseconds): Backup complete"
